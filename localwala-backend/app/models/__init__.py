@@ -1,0 +1,8 @@
+# app/models/__init__.py
+from app.models.user import User
+from app.models.shop import Shop, ShopCategory
+from app.models.product import Product
+from app.models.cart import CartItem
+from app.models.order import Order, OrderItem
+
+__all__ = ["User", "Shop", "ShopCategory", "Product", "CartItem", "Order", "OrderItem"]
