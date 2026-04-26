@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { shopsApi, productsApi } from "@/lib/api";
 import type { Shop, Product } from "@/types";
 import { useCartStore } from "@/store/cartStore";
+import { useAuthStore } from "@/store/authStore";
 import { Spinner, StarRating, Price, EmptyState } from "@/components/shared";
 import { Clock, Bike, ShoppingBag, ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
@@ -26,6 +27,11 @@ export default function ShopDetailPage() {
   }, [id]);
 
   const handleAdd = async (product: Product) => {
+    // Gate behind login
+    if (!useAuthStore.getState().isLoggedIn) {
+      toast.error("Please login to add items to cart");
+      return;
+    }
     setAdding(product.id);
     try {
       await addItem(product.id, 1);
