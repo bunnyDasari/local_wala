@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { shopsApi } from "@/lib/api";
 import type { Category, Shop } from "@/types";
@@ -7,6 +8,7 @@ import { Spinner, StarRating, EmptyState, SectionHeader } from "@/components/sha
 import { Clock, ChevronRight, TrendingUp, Package, Bike, LocateFixed, Loader2 } from "lucide-react";
 import { useLocation } from "@/hooks/useLocation";
 import { useLangStore } from "@/store/langStore";
+import { useAuthStore } from "@/store/authStore";
 
 function getGreeting(t: (k: any) => string): { text: string; emoji: string } {
   const hour = new Date().getHours();
@@ -17,12 +19,21 @@ function getGreeting(t: (k: any) => string): { text: string; emoji: string } {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { role } = useAuthStore();
   const { lat, lng, loading: locLoading, error: locError } = useLocation();
   const { t } = useLangStore();
   const [categories, setCategories] = useState<Category[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [activeCategory, setActiveCategory] = useState<number | undefined>();
   const [loading, setLoading] = useState(false);
+
+  // Redirect vendors to their dashboard
+  useEffect(() => {
+    if (role === "vendor") {
+      router.push("/vendor/dashboard");
+    }
+  }, [role, router]);
 
   const { text: greetText, emoji: greetEmoji } = getGreeting(t);
 

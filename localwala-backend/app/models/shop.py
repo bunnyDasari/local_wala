@@ -32,6 +32,7 @@ class Shop(Base):
     description = Column(Text)
     image_url = Column(String(500))
     category_id = Column(Integer, ForeignKey("shop_categories.id"), nullable=False)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Link to vendor user
     owner_name = Column(String(100))
     phone = Column(String(15))
     address = Column(String(500))
@@ -47,5 +48,6 @@ class Shop(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     category = relationship("ShopCategory", back_populates="shops")
+    owner = relationship("User", back_populates="owned_shops")
     products = relationship("Product", back_populates="shop", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="shop")

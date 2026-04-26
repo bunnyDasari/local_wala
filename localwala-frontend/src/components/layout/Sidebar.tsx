@@ -15,17 +15,27 @@ import AuthModal from "@/components/ui/AuthModal";
 export default function Sidebar() {
   const pathname = usePathname();
   const itemCount = useCartStore((s) => s.itemCount());
-  const { isLoggedIn, userName, logout } = useAuthStore();
+  const { isLoggedIn, userName, role, logout } = useAuthStore();
   const { t } = useLangStore();
   const [showAuth, setShowAuth] = useState(false);
 
-  const NAV = [
-    { label: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
-    { label: t("shop"), href: "/shop", icon: Store },
+  // Navigation based on role
+  const USER_NAV = [
+    { label: t("dashboard"), href: "/dashboard", icon: LayoutDashboard, badge: false },
+    { label: t("shop"), href: "/shop", icon: Store, badge: false },
     { label: t("cart"), href: "/cart", icon: ShoppingCart, badge: true },
-    { label: t("trackOrder"), href: "/tracking", icon: MapPin },
-    { label: t("myOrders"), href: "/orders", icon: ClipboardList },
+    { label: t("trackOrder"), href: "/tracking", icon: MapPin, badge: false },
+    { label: t("myOrders"), href: "/orders", icon: ClipboardList, badge: false },
   ];
+
+  const VENDOR_NAV = [
+    { label: "Dashboard", href: "/vendor/dashboard", icon: LayoutDashboard, badge: false },
+    { label: "My Shop", href: "/vendor/shop", icon: Store, badge: false },
+    { label: "Products", href: "/vendor/products", icon: ShoppingCart, badge: false },
+    { label: "Orders", href: "/vendor/orders", icon: ClipboardList, badge: false },
+  ];
+
+  const NAV = role === "vendor" ? VENDOR_NAV : USER_NAV;
 
   return (
     <>
@@ -59,7 +69,7 @@ export default function Sidebar() {
                 <Icon className={clsx("w-5 h-5 shrink-0", active ? "text-brand-500" : "")}
                   style={!active ? { color: "var(--text-subtle)" } : {}} />
                 <span className="flex-1">{label}</span>
-                {badge && itemCount > 0 && (
+                {badge && role !== "vendor" && itemCount > 0 && (
                   <span className="bg-brand-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                     {itemCount}
                   </span>
@@ -78,7 +88,9 @@ export default function Sidebar() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{userName}</p>
-                <p className="text-xs" style={{ color: "var(--text-subtle)" }}>{t("logout")}</p>
+                <p className="text-xs" style={{ color: "var(--text-subtle)" }}>
+                  {role === "vendor" ? "Vendor Account" : t("logout")}
+                </p>
               </div>
               <LogOut className="w-4 h-4 group-hover:text-red-400 transition-colors"
                 style={{ color: "var(--text-subtle)" }} />
@@ -105,7 +117,7 @@ export default function Sidebar() {
             >
               <Icon className="w-5 h-5" />
               {label.split(" ")[0]}
-              {badge && itemCount > 0 && (
+              {badge && role !== "vendor" && itemCount > 0 && (
                 <span className="absolute top-1.5 right-[20%] bg-brand-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {itemCount}
                 </span>

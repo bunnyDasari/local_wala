@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { ordersApi } from "@/lib/api";
 import type { Order, OrderStatus } from "@/types";
@@ -23,7 +23,7 @@ const STATUS_INDEX: Record<OrderStatus, number> = {
   "Cancelled":                  -1,
 };
 
-export default function TrackingPage() {
+function TrackingContent() {
   const params = useSearchParams();
   const orderId = params.get("orderId");
 
@@ -196,5 +196,13 @@ export default function TrackingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TrackingPage() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <TrackingContent />
+    </Suspense>
   );
 }

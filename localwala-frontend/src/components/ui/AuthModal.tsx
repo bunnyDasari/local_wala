@@ -33,7 +33,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
   }, [timer]);
 
   // ── Register state ─────────────────────────────────────────────────────────
-  const [regForm, setRegForm] = useState({ name: "", email: "", phone: "", password: "" });
+  const [regForm, setRegForm] = useState({ name: "", email: "", phone: "", password: "", role: "user" });
   const [showPass, setShowPass] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
 
@@ -291,6 +291,37 @@ export default function AuthModal({ onClose }: AuthModalProps) {
         {/* ══ REGISTER TAB ═══════════════════════════════════════════════════ */}
         {tab === "register" && (
           <form onSubmit={handleRegister} className="px-8 py-6 space-y-4">
+            {/* Role Selection */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">I am a</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRegForm(f => ({ ...f, role: "user" }))}
+                  className={clsx(
+                    "px-4 py-3 rounded-xl text-sm font-semibold transition-all border-2",
+                    regForm.role === "user"
+                      ? "bg-brand-50 border-brand-500 text-brand-700"
+                      : "border-gray-200 text-gray-600 hover:border-gray-300"
+                  )}
+                >
+                  🛒 Customer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRegForm(f => ({ ...f, role: "vendor" }))}
+                  className={clsx(
+                    "px-4 py-3 rounded-xl text-sm font-semibold transition-all border-2",
+                    regForm.role === "vendor"
+                      ? "bg-brand-50 border-brand-500 text-brand-700"
+                      : "border-gray-200 text-gray-600 hover:border-gray-300"
+                  )}
+                >
+                  🏪 Shop Owner
+                </button>
+              </div>
+            </div>
+
             <Field label="Full Name" type="text" value={regForm.name} onChange={setReg("name")} placeholder="Ravi Kumar" required />
             <Field label="Email" type="email" value={regForm.email} onChange={setReg("email")} placeholder="you@email.com" required />
             <Field label="Phone Number" type="tel" value={regForm.phone} onChange={(e) => setRegForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, "").slice(0, 10) }))} placeholder="9876543210" required />

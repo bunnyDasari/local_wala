@@ -47,3 +47,34 @@ async def get_current_user_id(
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
     return int(user_id)
+
+
+async def get_current_user_role(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+) -> str:
+    """Extract user role from JWT token"""
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    payload = decode_token(credentials.credentials)
+    role = payload.get("role")
+    if not role:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+    return role
+
+
+def require_role(allowed_roles: list[str]):
+    """Dependency to check if user has required role"""
+    async def role_checker(
+        credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    ):
+        if not credentials:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        payload = decode_token(credentials.credentials)
+        role = payload.get("role")
+        if not role or role not in allowed_roles:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access denied. Required roles: {', '.join(allowed_roles)}"
+            )
+        return payload
+    return role_checker

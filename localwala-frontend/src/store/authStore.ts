@@ -7,10 +7,11 @@ interface AuthState {
   token: string | null;
   userId: number | null;
   userName: string | null;
+  role: string | null;
   isLoggedIn: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: { name: string; email: string; phone: string; password: string }) => Promise<void>;
-  setUser: (res: TokenResponse) => void;   // ← used after OTP verify
+  register: (data: { name: string; email: string; phone: string; password: string; role?: string }) => Promise<void>;
+  setUser: (res: TokenResponse) => void;
   logout: () => void;
 }
 
@@ -20,23 +21,42 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       userId: null,
       userName: null,
+      role: null,
       isLoggedIn: false,
 
       login: async (email, password) => {
         const res: TokenResponse = await authApi.login(email, password);
         if (typeof window !== "undefined") localStorage.setItem("lw_token", res.access_token);
-        set({ token: res.access_token, userId: res.user_id, userName: res.name, isLoggedIn: true });
+        set({
+          token: res.access_token,
+          userId: res.user_id,
+          userName: res.name,
+          role: res.role,
+          isLoggedIn: true
+        });
       },
 
       register: async (data) => {
         const res: TokenResponse = await authApi.register(data);
         if (typeof window !== "undefined") localStorage.setItem("lw_token", res.access_token);
-        set({ token: res.access_token, userId: res.user_id, userName: res.name, isLoggedIn: true });
+        set({
+          token: res.access_token,
+          userId: res.user_id,
+          userName: res.name,
+          role: res.role,
+          isLoggedIn: true
+        });
       },
 
       setUser: (res: TokenResponse) => {
         if (typeof window !== "undefined") localStorage.setItem("lw_token", res.access_token);
-        set({ token: res.access_token, userId: res.user_id, userName: res.name, isLoggedIn: true });
+        set({
+          token: res.access_token,
+          userId: res.user_id,
+          userName: res.name,
+          role: res.role,
+          isLoggedIn: true
+        });
       },
 
       logout: () => {
@@ -44,7 +64,7 @@ export const useAuthStore = create<AuthState>()(
           localStorage.removeItem("lw_token");
           localStorage.removeItem("lw_user");
         }
-        set({ token: null, userId: null, userName: null, isLoggedIn: false });
+        set({ token: null, userId: null, userName: null, role: null, isLoggedIn: false });
       },
     }),
     { name: "lw_auth" }

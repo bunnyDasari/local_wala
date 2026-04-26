@@ -2,6 +2,7 @@ import axios, { AxiosError } from "axios";
 import type {
   TokenResponse, Category, ShopList, Shop,
   Product, Cart, Order, OrderListItem,
+  VendorShop, VendorProduct, VendorOrder, VendorAnalytics,
 } from "@/types";
 
 const api = axios.create({
@@ -77,8 +78,8 @@ api.interceptors.response.use(
 
 export const authApi = {
   register: (data: {
-    name: string; email: string; phone: string; password: string; address?: string;
-  }) => api.post<TokenResponse>("/auth/register", data).then((r) => r.data),
+    name: string; email: string; phone: string; password: string; address?: string; role?: string;
+  }) => api.post<TokenResponse>("/auth/register", { ...data, role: data.role || "user" }).then((r) => r.data),
 
   login: (email: string, password: string) =>
     api.post<TokenResponse>("/auth/login", { email, password }).then((r) => r.data),
@@ -146,6 +147,43 @@ export const ordersApi = {
 
   updateStatus: (id: number, status: string) =>
     api.patch<Order>(`/orders/${id}/status`, null, { params: { status } }).then((r) => r.data),
+};
+
+// ─── Vendor ────────────────────────────────────────────────────────────────
+export const vendorApi = {
+  // Shop management
+  getShop: () => api.get<VendorShop>("/vendor/shop").then((r) => r.data),
+  
+  updateShop: (data: Partial<VendorShop>) =>
+    api.patch<VendorShop>("/vendor/shop", data).then((r) => r.data),
+
+  // Product management
+  getProducts: () => api.get<VendorProduct[]>("/vendor/products").then((r) => r.data),
+  
+  createProduct: (data: {
+    name: string;
+    description?: string;
+    price: number;
+    original_price?: number;
+    unit: string;
+    stock: number;
+    image_url?: string;
+  }) => api.post<VendorProduct>("/vendor/products", data).then((r) => r.data),
+  
+  updateProduct: (id: number, data: Partial<VendorProduct>) =>
+    api.patch<VendorProduct>(`/vendor/products/${id}`, data).then((r) => r.data),
+  
+  deleteProduct: (id: number) =>
+    api.delete(`/vendor/products/${id}`).then((r) => r.data),
+
+  // Order management
+  getOrders: () => api.get<VendorOrder[]>("/vendor/orders").then((r) => r.data),
+  
+  updateOrderStatus: (id: number, status: string) =>
+    api.patch<VendorOrder>(`/vendor/orders/${id}/status`, null, { params: { status } }).then((r) => r.data),
+
+  // Analytics
+  getAnalytics: () => api.get<VendorAnalytics>("/vendor/analytics").then((r) => r.data),
 };
 
 export { extractErrorMessage };

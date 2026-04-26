@@ -1,7 +1,14 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+import enum
 from app.core.database import Base
+
+
+class UserRole(str, enum.Enum):
+    USER = "user"
+    VENDOR = "vendor"
+    ADMIN = "admin"
 
 
 class User(Base):
@@ -12,6 +19,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     phone = Column(String(15), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
+    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
     address = Column(String(500))
     latitude = Column(Float, default=17.3850)   # Hyderabad default
     longitude = Column(Float, default=78.4867)
@@ -21,3 +29,4 @@ class User(Base):
 
     cart_items = relationship("CartItem", back_populates="user", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="user")
+    owned_shops = relationship("Shop", back_populates="owner")
