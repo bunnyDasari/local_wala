@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/store/cartStore";
 import { ordersApi } from "@/lib/api";
-import { Spinner, EmptyState, QuantityStepper } from "@/components/shared";
-import { ShoppingBag, Trash2, ArrowRight, Tag } from "lucide-react";
+import { Spinner, EmptyState } from "@/components/shared";
+import { ShoppingBag, Trash2, ArrowLeft, Minus, Plus, Tag, ChevronRight, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function CartPage() {
@@ -13,14 +13,15 @@ export default function CartPage() {
   const { cart, loading, fetchCart, updateItem, clearCart } = useCartStore();
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
-  const [address, setAddress]         = useState("Banjara Hills, Hyderabad — 500034");
+  const [address, setAddress] = useState("Banjara Hills, Hyderabad — 500034");
+  const [coupon, setCoupon] = useState("");
 
   useEffect(() => { fetchCart(); }, [fetchCart]);
 
   const handleUpdate = async (itemId: number, qty: number) => {
     setUpdatingId(itemId);
     try { await updateItem(itemId, qty); }
-    catch { toast.error("Failed to update cart"); }
+    catch { toast.error("Failed to update"); }
     finally { setUpdatingId(null); }
   };
 
@@ -30,7 +31,7 @@ export default function CartPage() {
     try {
       const order = await ordersApi.place(address);
       await fetchCart();
-      toast.success("Order placed successfully! 🎉");
+      toast.success("Order placed! 🎉");
       router.push(`/tracking?orderId=${order.id}`);
     } catch {
       toast.error("Please login to place an order");
@@ -39,126 +40,233 @@ export default function CartPage() {
     }
   };
 
-  if (loading) return <Spinner />;
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <Spinner />
+    </div>
+  );
 
   const isEmpty = !cart || cart.items.length === 0;
 
   return (
-    <div className="pb-24 md:pb-8 animate-fade-in">
+    <div className="max-w-2xl mx-auto pb-32 page-enter">
+
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Cart</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ background: "var(--surface-3)" }}
+          >
+            <ArrowLeft className="w-5 h-5" style={{ color: "var(--text)" }} />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold" style={{ color: "var(--text)" }}>My Cart</h1>
+            {!isEmpty && (
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                {cart.items.length} item{cart.items.length > 1 ? "s" : ""}
+                {cart.shop_name && ` · ${cart.shop_name}`}
+              </p>
+            )}
+          </div>
+        </div>
         {!isEmpty && (
           <button
-            onClick={clearCart}
-            className="text-sm text-red-500 hover:text-red-700 flex items-center gap-1 transition-colors"
+            onClick={() => clearCart()}
+            className="text-xs font-semibold text-red-500 flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-red-50 transition-colors"
           >
-            <Trash2 className="w-4 h-4" /> Clear
+            <Trash2 className="w-3.5 h-3.5" /> Clear
           </button>
         )}
       </div>
 
       {isEmpty ? (
-        <div className="space-y-4">
-          <EmptyState icon="🛒" title="Your cart is empty" subtitle="Browse shops and add items to get started." />
-          <div className="flex justify-center">
-            <Link href="/shop" className="btn-primary inline-flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4" /> Browse Shops
-            </Link>
+        <div className="flex flex-col items-center justify-center py-20 gap-6">
+          <div className="w-24 h-24 rounded-3xl bg-brand-50 flex items-center justify-center text-5xl">
+            🛒
           </div>
+          <div className="text-center">
+            <p className="text-xl font-bold mb-1" style={{ color: "var(--text)" }}>Your cart is empty</p>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              Browse shops and add items to get started
+            </p>
+          </div>
+          <Link href="/shop" className="btn-primary flex items-center gap-2">
+            <ShoppingBag className="w-4 h-4" /> Browse Shops
+          </Link>
         </div>
       ) : (
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Items */}
-          <div className="lg:col-span-2 space-y-3">
-            {cart.shop_name && (
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                <span className="text-base">🏪</span>
-                <span>Ordering from <strong className="text-gray-800">{cart.shop_name}</strong></span>
-              </div>
-            )}
+        <div className="space-y-4">
 
-            {cart.items.map((item) => (
-              <div key={item.id} className="card p-4 flex items-center gap-3">
-                <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-xl shrink-0">🛍️</div>
+          {/* Cart Items */}
+          <div className="rounded-3xl overflow-hidden" style={{ background: "var(--surface)" }}>
+            {cart.items.map((item, idx) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-4 px-5 py-4"
+                style={{
+                  borderBottom: idx < cart.items.length - 1 ? "1px solid var(--border-soft)" : "none"
+                }}
+              >
+                {/* Product image */}
+                <div
+                  className="w-16 h-16 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center"
+                  style={{ background: "var(--surface-3)" }}
+                >
+                  {item.product.image_url ? (
+                    <img src={item.product.image_url} alt={item.product.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl">🛍️</span>
+                  )}
+                </div>
 
+                {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 text-sm">{item.product.name}</h3>
-                  <p className="text-xs text-gray-400">per {item.product.unit}</p>
-                  <p className="text-sm font-bold text-brand-600 mt-1">₹{item.product.price}</p>
+                  <p className="font-semibold text-sm leading-tight" style={{ color: "var(--text)" }}>
+                    {item.product.name}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--text-subtle)" }}>
+                    per {item.product.unit}
+                  </p>
+                  <p className="font-bold text-sm mt-1 text-brand-600">
+                    ₹{item.product.price}
+                  </p>
                 </div>
 
-                <div className="flex flex-col items-end gap-2 shrink-0">
-                  <QuantityStepper
-                    quantity={item.quantity}
-                    loading={updatingId === item.id}
-                    onDecrement={() => handleUpdate(item.id, item.quantity - 1)}
-                    onIncrement={() => handleUpdate(item.id, item.quantity + 1)}
-                  />
-                  <p className="text-sm font-bold text-gray-900">₹{item.item_total.toFixed(0)}</p>
+                {/* Qty stepper */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleUpdate(item.id, item.quantity - 1)}
+                    disabled={updatingId === item.id}
+                    className="w-8 h-8 rounded-full border-2 border-brand-500 flex items-center justify-center text-brand-600 hover:bg-brand-50 transition-colors disabled:opacity-50"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="w-6 text-center font-bold text-sm" style={{ color: "var(--text)" }}>
+                    {item.quantity}
+                  </span>
+                  <button
+                    onClick={() => handleUpdate(item.id, item.quantity + 1)}
+                    disabled={updatingId === item.id}
+                    className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-white hover:bg-brand-600 transition-colors disabled:opacity-50"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
                 </div>
+
+                {/* Item total */}
+                <p className="font-bold text-sm w-14 text-right shrink-0" style={{ color: "var(--text)" }}>
+                  ₹{item.item_total.toFixed(0)}
+                </p>
               </div>
             ))}
           </div>
 
-          {/* Summary */}
-          <div className="space-y-4">
-            {/* Coupon */}
-            <div className="card p-4">
-              <div className="flex items-center gap-2 text-sm text-brand-600 font-semibold mb-3">
-                <Tag className="w-4 h-4" /> Apply Coupon
-              </div>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-300"
-                  placeholder="Enter coupon code"
-                />
-                <button className="btn-outline text-sm px-3 py-2">Apply</button>
-              </div>
+          {/* Delivery Address */}
+          <div className="rounded-3xl p-5" style={{ background: "var(--surface)" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin className="w-4 h-4 text-brand-500" />
+              <p className="font-bold text-sm" style={{ color: "var(--text)" }}>Delivery Address</p>
             </div>
+            <textarea
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              rows={2}
+              className="input resize-none text-sm"
+              placeholder="Enter your delivery address"
+            />
+          </div>
 
-            {/* Bill */}
-            <div className="card p-5 space-y-3">
-              <h3 className="font-bold text-gray-900">Bill Summary</h3>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal ({cart.items.length} items)</span>
-                  <span>₹{cart.subtotal.toFixed(0)}</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>Delivery Fee</span>
-                  <span className="text-green-600">₹{cart.delivery_fee}</span>
-                </div>
-                <div className="border-t border-dashed border-gray-200 pt-2 flex justify-between font-bold text-base text-gray-900">
-                  <span>Total</span>
-                  <span>₹{cart.total.toFixed(0)}</span>
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="mt-3">
-                <label className="text-xs font-semibold text-gray-600 block mb-1">Delivery Address</label>
-                <textarea
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  rows={2}
-                  className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"
-                />
-              </div>
-
-              <button
-                onClick={handleCheckout}
-                disabled={checkingOut}
-                className="w-full btn-primary flex items-center justify-center gap-2 mt-2"
-              >
-                {checkingOut ? "Placing Order..." : (
-                  <><span>Proceed to Checkout</span><ArrowRight className="w-4 h-4" /></>
-                )}
+          {/* Coupon */}
+          <div className="rounded-3xl p-5" style={{ background: "var(--surface)" }}>
+            <div className="flex items-center gap-2 mb-3">
+              <Tag className="w-4 h-4 text-brand-500" />
+              <p className="font-bold text-sm" style={{ color: "var(--text)" }}>Apply Coupon</p>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={coupon}
+                onChange={e => setCoupon(e.target.value)}
+                placeholder="Enter coupon code"
+                className="input flex-1 text-sm"
+              />
+              <button className="btn-outline text-sm px-4 py-2.5 whitespace-nowrap">
+                Apply
               </button>
-
-              <p className="text-[11px] text-center text-gray-400 mt-1">🔒 Secure checkout • Cash on delivery</p>
             </div>
           </div>
+
+          {/* Bill Summary */}
+          <div className="rounded-3xl p-5 space-y-3" style={{ background: "var(--surface)" }}>
+            <p className="font-bold" style={{ color: "var(--text)" }}>Bill Summary</p>
+
+            <div className="space-y-2.5 text-sm">
+              <div className="flex justify-between">
+                <span style={{ color: "var(--text-muted)" }}>
+                  Subtotal ({cart.items.length} item{cart.items.length > 1 ? "s" : ""})
+                </span>
+                <span className="font-semibold" style={{ color: "var(--text)" }}>
+                  ₹{cart.subtotal.toFixed(0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: "var(--text-muted)" }}>Delivery Fee</span>
+                <span className="font-semibold text-green-600">₹{cart.delivery_fee}</span>
+              </div>
+              <div
+                className="flex justify-between pt-3 border-t font-bold text-base"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <span style={{ color: "var(--text)" }}>Total</span>
+                <span className="text-brand-600">₹{cart.total.toFixed(0)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Free delivery progress */}
+          {cart.delivery_fee > 0 && (
+            <div
+              className="rounded-3xl p-4 flex items-center gap-3"
+              style={{ background: "var(--surface)" }}
+            >
+              <span className="text-xl">🛵</span>
+              <div className="flex-1">
+                <p className="text-xs font-semibold mb-1.5" style={{ color: "var(--text-muted)" }}>
+                  Add ₹{Math.max(0, 200 - cart.subtotal).toFixed(0)} more for free delivery
+                </p>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface-3)" }}>
+                  <div
+                    className="h-full bg-brand-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, (cart.subtotal / 200) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sticky Checkout Button */}
+      {!isEmpty && (
+        <div className="cart-bar">
+          <button
+            onClick={handleCheckout}
+            disabled={checkingOut}
+            className="w-full max-w-lg mx-auto flex items-center justify-between bg-gray-900 text-white px-6 py-4 rounded-2xl shadow-lg disabled:opacity-70 active:scale-98 transition-transform"
+          >
+            <div>
+              <p className="font-bold text-base">
+                {checkingOut ? "Placing Order..." : "Proceed to Checkout"}
+              </p>
+              <p className="text-xs text-white/60">🔒 Secure • Cash on delivery</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-lg">₹{cart.total.toFixed(0)}</span>
+              <ChevronRight className="w-5 h-5" />
+            </div>
+          </button>
         </div>
       )}
     </div>
