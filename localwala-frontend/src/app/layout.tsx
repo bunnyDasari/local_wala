@@ -1,10 +1,24 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Poppins, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
 import AppShell from "@/components/layout/AppShell";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-geist-sans" });
+// Poppins — bold headings, punchy feel like food delivery apps
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  variable: "--font-poppins",
+  display: "swap",
+});
+
+// DM Sans — clean, modern body text
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-dm-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "LocalWala — Hyperlocal Delivery",
@@ -13,7 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={`${poppins.variable} ${dmSans.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{
           __html: `
@@ -29,16 +43,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           `
         }} />
       </head>
-      <body style={{ background: "var(--surface-2)", color: "var(--text)" }}>
+      <body style={{ background: "var(--bg)", color: "var(--text)" }}>
         <Toaster
           position="top-right"
           toastOptions={{
             style: {
-              borderRadius: "12px",
-              fontFamily: "inherit",
-              background: "var(--surface)",
+              borderRadius: "14px",
+              fontFamily: "var(--font-dm-sans), sans-serif",
+              background: "var(--bg-card)",
               color: "var(--text)",
               border: "1px solid var(--border)",
+              fontWeight: "600",
             }
           }}
         />

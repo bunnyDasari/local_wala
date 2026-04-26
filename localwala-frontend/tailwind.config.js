@@ -18,7 +18,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
+        sans: ["var(--font-dm-sans)", "DM Sans", "system-ui", "sans-serif"],
+        heading: ["var(--font-poppins)", "Poppins", "sans-serif"],
       },
       boxShadow: {
         card: "0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06)",
