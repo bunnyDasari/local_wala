@@ -2,202 +2,101 @@
 import { useEffect, useState } from "react";
 import { vendorApi } from "@/lib/api";
 import type { VendorAnalytics } from "@/types";
-import { TrendingUp, Package, ShoppingBag, DollarSign, Star, Loader2 } from "lucide-react";
+import { TrendingUp, Package, ShoppingBag, IndianRupee, Star, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+
+const STATS = (a: VendorAnalytics) => [
+  { label: "Today's Orders",  value: a.today_orders,                          icon: ShoppingBag,   color: "#3b82f6" },
+  { label: "Today's Revenue", value: `₹${a.today_revenue.toFixed(0)}`,        icon: IndianRupee,   color: "#22c55e" },
+  { label: "Pending Orders",  value: a.pending_orders,                         icon: Package,       color: "#f97316" },
+  { label: "Total Products",  value: a.total_products,                         icon: Package,       color: "#a855f7" },
+  { label: "Total Orders",    value: a.total_orders,                           icon: TrendingUp,    color: "#06b6d4" },
+  { label: "Total Revenue",   value: `₹${a.total_revenue.toFixed(0)}`,        icon: IndianRupee,   color: "#10b981" },
+  { label: "Shop Rating",     value: `${a.shop_rating.toFixed(1)} ⭐`,        icon: Star,          color: "#eab308" },
+  { label: "Total Reviews",   value: a.total_reviews,                          icon: Star,          color: "#ec4899" },
+];
 
 export default function VendorDashboard() {
   const [analytics, setAnalytics] = useState<VendorAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadAnalytics();
+    vendorApi.getAnalytics()
+      .then(setAnalytics)
+      .catch(err => toast.error(err instanceof Error ? err.message : "Failed to load"))
+      .finally(() => setLoading(false));
   }, []);
 
-  const loadAnalytics = async () => {
-    try {
-      const data = await vendorApi.getAnalytics();
-      setAnalytics(data);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to load analytics");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (loading) return (
+    <div className="flex items-center justify-center h-96">
+      <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--brand)" }} />
+    </div>
+  );
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
-      </div>
-    );
-  }
+  if (!analytics) return (
+    <div className="text-center py-12" style={{ color: "var(--text-3)" }}>Failed to load analytics</div>
+  );
 
-  if (!analytics) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">Failed to load analytics</p>
-      </div>
-    );
-  }
-
-  const stats = [
-    {
-      label: "Today's Orders",
-      value: analytics.today_orders,
-      icon: ShoppingBag,
-      color: "bg-blue-500",
-      textColor: "text-blue-600",
-      bgColor: "bg-blue-50",
-    },
-    {
-      label: "Today's Revenue",
-      value: `₹${analytics.today_revenue.toFixed(2)}`,
-      icon: DollarSign,
-      color: "bg-green-500",
-      textColor: "text-green-600",
-      bgColor: "bg-green-50",
-    },
-    {
-      label: "Pending Orders",
-      value: analytics.pending_orders,
-      icon: Package,
-      color: "bg-orange-500",
-      textColor: "text-orange-600",
-      bgColor: "bg-orange-50",
-    },
-    {
-      label: "Total Products",
-      value: analytics.total_products,
-      icon: Package,
-      color: "bg-purple-500",
-      textColor: "text-purple-600",
-      bgColor: "bg-purple-50",
-    },
-    {
-      label: "Total Orders",
-      value: analytics.total_orders,
-      icon: TrendingUp,
-      color: "bg-indigo-500",
-      textColor: "text-indigo-600",
-      bgColor: "bg-indigo-50",
-    },
-    {
-      label: "Total Revenue",
-      value: `₹${analytics.total_revenue.toFixed(2)}`,
-      icon: DollarSign,
-      color: "bg-emerald-500",
-      textColor: "text-emerald-600",
-      bgColor: "bg-emerald-50",
-    },
-    {
-      label: "Shop Rating",
-      value: `${analytics.shop_rating.toFixed(1)} ⭐`,
-      icon: Star,
-      color: "bg-yellow-500",
-      textColor: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-    },
-    {
-      label: "Total Reviews",
-      value: analytics.total_reviews,
-      icon: Star,
-      color: "bg-pink-500",
-      textColor: "text-pink-600",
-      bgColor: "bg-pink-50",
-    },
-  ];
+  const avgOrder = analytics.total_orders > 0
+    ? (analytics.total_revenue / analytics.total_orders).toFixed(0)
+    : "0";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8 page-enter">
       <div>
-        <h1 className="text-3xl font-bold" style={{ color: "var(--text)" }}>
-          Vendor Dashboard
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--text-subtle)" }}>
-          Overview of your shop performance
-        </p>
+        <h1 className="text-2xl font-black" style={{ color: "var(--text)" }}>Vendor Dashboard</h1>
+        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>Overview of your shop performance</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, idx) => (
-          <div
-            key={idx}
-            className="rounded-2xl p-6 border"
-            style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium" style={{ color: "var(--text-subtle)" }}>
-                  {stat.label}
-                </p>
-                <p className="text-2xl font-bold mt-2" style={{ color: "var(--text)" }}>
-                  {stat.value}
-                </p>
-              </div>
-              <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}>
-                <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {STATS(analytics).map((s, i) => (
+          <div key={i} className="card p-5">
+            <div className="flex items-start justify-between mb-3">
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                style={{ background: `${s.color}20` }}>
+                <s.icon className="w-5 h-5" style={{ color: s.color }} />
               </div>
             </div>
+            <p className="text-2xl font-black" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-xs mt-1" style={{ color: "var(--text-3)" }}>{s.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div
-          className="rounded-2xl p-6 border"
-          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-        >
-          <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>
-            Quick Stats
-          </h2>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span style={{ color: "var(--text-subtle)" }}>Average Order Value</span>
-              <span className="font-bold" style={{ color: "var(--text)" }}>
-                ₹{analytics.total_orders > 0 ? (analytics.total_revenue / analytics.total_orders).toFixed(2) : "0.00"}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span style={{ color: "var(--text-subtle)" }}>Orders Today</span>
-              <span className="font-bold" style={{ color: "var(--text)" }}>
-                {analytics.today_orders}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span style={{ color: "var(--text-subtle)" }}>Pending Orders</span>
-              <span className="font-bold text-orange-600">
-                {analytics.pending_orders}
-              </span>
-            </div>
+      {/* Quick stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="card p-6">
+          <h2 className="font-black mb-4" style={{ color: "var(--text)" }}>Quick Stats</h2>
+          <div className="space-y-4">
+            {[
+              { label: "Average Order Value", value: `₹${avgOrder}`, color: "var(--brand)" },
+              { label: "Orders Today",        value: analytics.today_orders, color: "#3b82f6" },
+              { label: "Pending Orders",      value: analytics.pending_orders, color: "#f97316" },
+            ].map(row => (
+              <div key={row.label} className="flex justify-between items-center py-2"
+                style={{ borderBottom: "1px solid var(--border)" }}>
+                <span className="text-sm" style={{ color: "var(--text-3)" }}>{row.label}</span>
+                <span className="font-black text-sm" style={{ color: row.color }}>{row.value}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div
-          className="rounded-2xl p-6 border"
-          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-        >
-          <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text)" }}>
-            Shop Performance
-          </h2>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span style={{ color: "var(--text-subtle)" }}>Rating</span>
-              <span className="font-bold" style={{ color: "var(--text)" }}>
-                {analytics.shop_rating.toFixed(1)} / 5.0
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span style={{ color: "var(--text-subtle)" }}>Total Reviews</span>
-              <span className="font-bold" style={{ color: "var(--text)" }}>
-                {analytics.total_reviews}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span style={{ color: "var(--text-subtle)" }}>Products Listed</span>
-              <span className="font-bold" style={{ color: "var(--text)" }}>
-                {analytics.total_products}
-              </span>
-            </div>
+        <div className="card p-6">
+          <h2 className="font-black mb-4" style={{ color: "var(--text)" }}>Shop Performance</h2>
+          <div className="space-y-4">
+            {[
+              { label: "Rating",           value: `${analytics.shop_rating.toFixed(1)} / 5.0`, color: "#eab308" },
+              { label: "Total Reviews",    value: analytics.total_reviews, color: "var(--text)" },
+              { label: "Products Listed",  value: analytics.total_products, color: "var(--brand)" },
+            ].map(row => (
+              <div key={row.label} className="flex justify-between items-center py-2"
+                style={{ borderBottom: "1px solid var(--border)" }}>
+                <span className="text-sm" style={{ color: "var(--text-3)" }}>{row.label}</span>
+                <span className="font-black text-sm" style={{ color: row.color }}>{row.value}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

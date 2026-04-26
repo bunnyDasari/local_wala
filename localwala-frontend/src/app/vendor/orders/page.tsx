@@ -4,22 +4,17 @@ import { vendorApi } from "@/lib/api";
 import type { VendorOrder, OrderStatus } from "@/types";
 import { ShoppingBag, Loader2, MapPin, User, Phone, Clock } from "lucide-react";
 import toast from "react-hot-toast";
-import { clsx } from "clsx";
 
 const STATUS_OPTIONS: OrderStatus[] = [
-  "Order Placed",
-  "Vendor Preparing",
-  "Picked by Delivery Partner",
-  "Delivered",
-  "Cancelled",
+  "Order Placed", "Vendor Preparing", "Picked by Delivery Partner", "Delivered", "Cancelled",
 ];
 
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  "Order Placed": "bg-blue-100 text-blue-700",
-  "Vendor Preparing": "bg-yellow-100 text-yellow-700",
-  "Picked by Delivery Partner": "bg-purple-100 text-purple-700",
-  "Delivered": "bg-green-100 text-green-700",
-  "Cancelled": "bg-red-100 text-red-700",
+const STATUS_STYLE: Record<OrderStatus, { bg: string; color: string }> = {
+  "Order Placed":               { bg: "rgba(59,130,246,0.15)",  color: "#60a5fa" },
+  "Vendor Preparing":           { bg: "rgba(234,179,8,0.15)",   color: "#facc15" },
+  "Picked by Delivery Partner": { bg: "rgba(168,85,247,0.15)",  color: "#c084fc" },
+  "Delivered":                  { bg: "rgba(34,197,94,0.15)",   color: "#4ade80" },
+  "Cancelled":                  { bg: "rgba(239,68,68,0.15)",   color: "#f87171" },
 };
 
 export default function VendorOrdersPage() {
@@ -28,242 +23,197 @@ export default function VendorOrdersPage() {
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
 
   useEffect(() => {
-    loadOrders();
+    vendorApi.getOrders()
+      .then(setOrders)
+      .catch(err => toast.error(err instanceof Error ? err.message : "Failed to load"))
+      .finally(() => setLoading(false));
   }, []);
 
-  const loadOrders = async () => {
+  const updateStatus = async (orderId: number, status: OrderStatus) => {
     try {
-      const data = await vendorApi.getOrders();
-      setOrders(data);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to load orders");
-    } finally {
-      setLoading(false);
-    }
+      const updated = await vendorApi.updateOrderStatus(orderId, status);
+      setOrders(orders.map(o => o.id === updated.id ? updated : o));
+      toast.success(`Status → ${status}`);
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Failed"); }
   };
 
-  const updateStatus = async (orderId: number, newStatus: OrderStatus) => {
-    try {
-      const updated = await vendorApi.updateOrderStatus(orderId, newStatus);
-      setOrders(orders.map((o) => (o.id === updated.id ? updated : o)));
-      toast.success(`Order status updated to: ${newStatus}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update status");
-    }
-  };
+  const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
 
-  const filteredOrders = filter === "all" ? orders : orders.filter((o) => o.status === filter);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center h-96">
+      <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--brand)" }} />
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 pb-8 page-enter">
       <div>
-        <h1 className="text-3xl font-bold flex items-center gap-3" style={{ color: "var(--text)" }}>
-          <ShoppingBag className="w-8 h-8 text-brand-500" />
-          Orders
+        <h1 className="text-2xl font-black flex items-center gap-2" style={{ color: "var(--text)" }}>
+          <ShoppingBag className="w-6 h-6" style={{ color: "var(--brand)" }} /> Orders
         </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--text-subtle)" }}>
-          Manage incoming orders and update their status
+        <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
+          {orders.length} total orders
         </p>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        <button
-          onClick={() => setFilter("all")}
-          className={clsx(
-            "px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap transition-colors",
-            filter === "all"
-              ? "bg-brand-500 text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          )}
-        >
+      {/* Filter tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <button onClick={() => setFilter("all")}
+          className="px-4 py-2 rounded-2xl text-sm font-bold whitespace-nowrap transition-all"
+          style={{
+            background: filter === "all" ? "var(--brand)" : "var(--bg-input)",
+            color: filter === "all" ? "white" : "var(--text-3)",
+            boxShadow: filter === "all" ? "var(--shadow-brand)" : "none",
+          }}>
           All ({orders.length})
         </button>
-        {STATUS_OPTIONS.map((status) => {
-          const count = orders.filter((o) => o.status === status).length;
+        {STATUS_OPTIONS.map(s => {
+          const count = orders.filter(o => o.status === s).length;
+          const active = filter === s;
           return (
-            <button
-              key={status}
-              onClick={() => setFilter(status)}
-              className={clsx(
-                "px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap transition-colors",
-                filter === status
-                  ? "bg-brand-500 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              )}
-            >
-              {status} ({count})
+            <button key={s} onClick={() => setFilter(s)}
+              className="px-4 py-2 rounded-2xl text-sm font-bold whitespace-nowrap transition-all"
+              style={{
+                background: active ? "var(--brand)" : "var(--bg-input)",
+                color: active ? "white" : "var(--text-3)",
+                boxShadow: active ? "var(--shadow-brand)" : "none",
+              }}>
+              {s.split(" ")[0]} ({count})
             </button>
           );
         })}
       </div>
 
-      {filteredOrders.length === 0 ? (
-        <div
-          className="rounded-2xl p-12 text-center border"
-          style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-        >
-          <ShoppingBag className="w-16 h-16 mx-auto mb-4" style={{ color: "var(--text-subtle)" }} />
-          <h3 className="text-xl font-bold mb-2" style={{ color: "var(--text)" }}>
-            No orders found
-          </h3>
-          <p style={{ color: "var(--text-subtle)" }}>
-            {filter === "all" ? "You haven't received any orders yet" : `No orders with status: ${filter}`}
+      {filtered.length === 0 ? (
+        <div className="card p-16 text-center">
+          <ShoppingBag className="w-16 h-16 mx-auto mb-4" style={{ color: "var(--text-3)" }} />
+          <p className="font-black text-lg" style={{ color: "var(--text)" }}>No orders found</p>
+          <p className="text-sm mt-1" style={{ color: "var(--text-3)" }}>
+            {filter === "all" ? "No orders yet" : `No ${filter} orders`}
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredOrders.map((order) => (
-            <div
-              key={order.id}
-              className="rounded-2xl p-6 border"
-              style={{ background: "var(--surface)", borderColor: "var(--border)" }}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold" style={{ color: "var(--text)" }}>
-                      Order #{order.id}
-                    </h3>
-                    <span className={clsx("px-3 py-1 rounded-lg text-xs font-semibold", STATUS_COLORS[order.status])}>
-                      {order.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm" style={{ color: "var(--text-subtle)" }}>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
+          {filtered.map(order => {
+            const ss = STATUS_STYLE[order.status];
+            return (
+              <div key={order.id} className="card p-5">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="font-black" style={{ color: "var(--text)" }}>Order #{order.id}</h3>
+                      <span className="px-3 py-1 rounded-full text-xs font-bold"
+                        style={{ background: ss.bg, color: ss.color }}>
+                        {order.status}
+                      </span>
+                    </div>
+                    <span className="flex items-center gap-1 text-xs" style={{ color: "var(--text-3)" }}>
+                      <Clock className="w-3.5 h-3.5" />
                       {new Date(order.placed_at).toLocaleString()}
                     </span>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-brand-600">₹{order.total_amount.toFixed(2)}</p>
-                  <p className="text-sm" style={{ color: "var(--text-subtle)" }}>
-                    {order.items.length} item{order.items.length > 1 ? "s" : ""}
-                  </p>
-                </div>
-              </div>
-
-              {/* Customer Info */}
-              <div
-                className="rounded-xl p-4 mb-4"
-                style={{ background: "var(--surface-3)" }}
-              >
-                <h4 className="font-semibold mb-3" style={{ color: "var(--text)" }}>
-                  Customer Details
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4" style={{ color: "var(--text-subtle)" }} />
-                    <span style={{ color: "var(--text)" }}>{order.user.name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4" style={{ color: "var(--text-subtle)" }} />
-                    <span style={{ color: "var(--text)" }}>{order.user.phone}</span>
-                  </div>
-                  <div className="flex items-start gap-2 md:col-span-2">
-                    <MapPin className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "var(--text-subtle)" }} />
-                    <span style={{ color: "var(--text)" }}>{order.delivery_address}</span>
-                  </div>
-                  {order.delivery_notes && (
-                    <div className="md:col-span-2">
-                      <span className="font-semibold" style={{ color: "var(--text)" }}>Notes: </span>
-                      <span style={{ color: "var(--text-subtle)" }}>{order.delivery_notes}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Order Items */}
-              <div className="space-y-2 mb-4">
-                <h4 className="font-semibold" style={{ color: "var(--text)" }}>Order Items</h4>
-                {order.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between p-3 rounded-xl"
-                    style={{ background: "var(--surface-3)" }}
-                  >
-                    <div className="flex items-center gap-3">
-                      {item.product.image_url && (
-                        <img
-                          src={item.product.image_url}
-                          alt={item.product.name}
-                          className="w-12 h-12 object-cover rounded-lg"
-                        />
-                      )}
-                      <div>
-                        <p className="font-semibold" style={{ color: "var(--text)" }}>
-                          {item.product.name}
-                        </p>
-                        <p className="text-sm" style={{ color: "var(--text-subtle)" }}>
-                          {item.quantity} × ₹{item.unit_price.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="font-bold" style={{ color: "var(--text)" }}>
-                      ₹{item.total_price.toFixed(2)}
+                  <div className="text-right">
+                    <p className="text-2xl font-black" style={{ color: "var(--brand)" }}>
+                      ₹{order.total_amount.toFixed(0)}
+                    </p>
+                    <p className="text-xs" style={{ color: "var(--text-3)" }}>
+                      {order.items.length} item{order.items.length > 1 ? "s" : ""}
                     </p>
                   </div>
-                ))}
-              </div>
+                </div>
 
-              {/* Order Summary */}
-              <div className="space-y-2 mb-4 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: "var(--text-subtle)" }}>Subtotal</span>
-                  <span style={{ color: "var(--text)" }}>₹{order.subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span style={{ color: "var(--text-subtle)" }}>Delivery Fee</span>
-                  <span style={{ color: "var(--text)" }}>₹{order.delivery_fee.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold pt-2 border-t" style={{ borderColor: "var(--border)" }}>
-                  <span style={{ color: "var(--text)" }}>Total</span>
-                  <span className="text-brand-600">₹{order.total_amount.toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Status Update */}
-              {order.status !== "Delivered" && order.status !== "Cancelled" && (
-                <div>
-                  <label className="text-sm font-semibold mb-2 block" style={{ color: "var(--text)" }}>
-                    Update Status
-                  </label>
-                  <div className="flex gap-2 flex-wrap">
-                    {STATUS_OPTIONS.filter((s) => s !== "Cancelled").map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => updateStatus(order.id, status)}
-                        disabled={order.status === status}
-                        className={clsx(
-                          "px-4 py-2 rounded-xl text-sm font-semibold transition-colors",
-                          order.status === status
-                            ? STATUS_COLORS[status]
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        )}
-                      >
-                        {status}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => updateStatus(order.id, "Cancelled")}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                    >
-                      Cancel Order
-                    </button>
+                {/* Customer */}
+                <div className="rounded-2xl p-4 mb-4 space-y-2" style={{ background: "var(--bg-input)" }}>
+                  <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: "var(--text-3)" }}>
+                    Customer
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    <span className="flex items-center gap-2" style={{ color: "var(--text-2)" }}>
+                      <User className="w-4 h-4" style={{ color: "var(--brand)" }} /> {order.user.name}
+                    </span>
+                    <span className="flex items-center gap-2" style={{ color: "var(--text-2)" }}>
+                      <Phone className="w-4 h-4" style={{ color: "var(--brand)" }} /> {order.user.phone}
+                    </span>
+                    <span className="flex items-start gap-2 md:col-span-2" style={{ color: "var(--text-2)" }}>
+                      <MapPin className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "var(--brand)" }} />
+                      {order.delivery_address}
+                    </span>
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* Items */}
+                <div className="space-y-2 mb-4">
+                  {order.items.map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-3 rounded-2xl"
+                      style={{ background: "var(--bg-input)" }}>
+                      <div className="flex items-center gap-3">
+                        {item.product.image_url ? (
+                          <img src={item.product.image_url} alt={item.product.name}
+                            className="w-10 h-10 object-cover rounded-xl" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
+                            style={{ background: "var(--bg-card)" }}>🛍️</div>
+                        )}
+                        <div>
+                          <p className="font-bold text-sm" style={{ color: "var(--text)" }}>{item.product.name}</p>
+                          <p className="text-xs" style={{ color: "var(--text-3)" }}>
+                            {item.quantity} × ₹{item.unit_price.toFixed(0)}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="font-black" style={{ color: "var(--brand)" }}>₹{item.total_price.toFixed(0)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Summary */}
+                <div className="space-y-1.5 mb-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                  {[
+                    { label: "Subtotal", value: `₹${order.subtotal.toFixed(0)}` },
+                    { label: "Delivery", value: `₹${order.delivery_fee.toFixed(0)}` },
+                  ].map(r => (
+                    <div key={r.label} className="flex justify-between text-sm">
+                      <span style={{ color: "var(--text-3)" }}>{r.label}</span>
+                      <span style={{ color: "var(--text-2)" }}>{r.value}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between font-black pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                    <span style={{ color: "var(--text)" }}>Total</span>
+                    <span style={{ color: "var(--brand)" }}>₹{order.total_amount.toFixed(0)}</span>
+                  </div>
+                </div>
+
+                {/* Status update */}
+                {order.status !== "Delivered" && order.status !== "Cancelled" && (
+                  <div>
+                    <p className="text-xs font-bold mb-2" style={{ color: "var(--text-3)" }}>Update Status</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {STATUS_OPTIONS.filter(s => s !== "Cancelled").map(s => {
+                        const active = order.status === s;
+                        const style = STATUS_STYLE[s];
+                        return (
+                          <button key={s} onClick={() => updateStatus(order.id, s)} disabled={active}
+                            className="px-3 py-1.5 rounded-2xl text-xs font-bold transition-all"
+                            style={{
+                              background: active ? style.bg : "var(--bg-input)",
+                              color: active ? style.color : "var(--text-3)",
+                            }}>
+                            {s}
+                          </button>
+                        );
+                      })}
+                      <button onClick={() => updateStatus(order.id, "Cancelled")}
+                        className="px-3 py-1.5 rounded-2xl text-xs font-bold"
+                        style={{ background: "rgba(239,68,68,0.15)", color: "#f87171" }}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
