@@ -4,193 +4,153 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { shopsApi } from "@/lib/api";
 import type { Category, Shop } from "@/types";
-import { Spinner, StarRating, EmptyState, SectionHeader } from "@/components/shared";
-import { Clock, ChevronRight, TrendingUp, Package, Bike, LocateFixed, Loader2 } from "lucide-react";
+import { Spinner, EmptyState } from "@/components/shared";
+import { Clock, ChevronRight, Star, Bike, Loader2, LocateFixed } from "lucide-react";
 import { useLocation } from "@/hooks/useLocation";
-import { useLangStore } from "@/store/langStore";
 import { useAuthStore } from "@/store/authStore";
 
-function getGreeting(t: (k: any) => string): { text: string; emoji: string } {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return { text: t("goodMorning"), emoji: "🌅" };
-  if (hour >= 12 && hour < 17) return { text: t("goodAfternoon"), emoji: "☀️" };
-  if (hour >= 17 && hour < 21) return { text: t("goodEvening"), emoji: "🌆" };
-  return { text: t("goodNight"), emoji: "🌙" };
+const EMOJI: Record<string, string> = {
+  Groceries: "🛒", Vegetables: "🥦", Meat: "🥩", Medicines: "💊", Clothing: "👕",
+};
+
+function getGreeting(): { text: string; emoji: string } {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return { text: "Good Morning", emoji: "🌅" };
+  if (h >= 12 && h < 17) return { text: "Good Afternoon", emoji: "☀️" };
+  if (h >= 17 && h < 21) return { text: "Good Evening", emoji: "🌆" };
+  return { text: "Good Night", emoji: "🌙" };
 }
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { role } = useAuthStore();
-  const { lat, lng, loading: locLoading, error: locError } = useLocation();
-  const { t } = useLangStore();
+  const { role, userName } = useAuthStore();
+  const { lat, lng, loading: locLoading, city, label } = useLocation();
   const [categories, setCategories] = useState<Category[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [activeCategory, setActiveCategory] = useState<number | undefined>();
   const [loading, setLoading] = useState(false);
+  const { text, emoji } = getGreeting();
 
-  // Redirect vendors to their dashboard
   useEffect(() => {
-    if (role === "vendor") {
-      router.push("/vendor/dashboard");
-    }
+    if (role === "vendor") router.push("/vendor/dashboard");
   }, [role, router]);
 
-  const { text: greetText, emoji: greetEmoji } = getGreeting(t);
-
-  const HERO_STATS = [
-    { label: t("shopsNearby"), value: "12+", icon: Package, color: "bg-orange-50 text-orange-600" },
-    { label: t("avgDelivery"), value: "25 " + t("min"), icon: Bike, color: "bg-green-50 text-green-600" },
-    { label: t("ordersToday"), value: "3", icon: TrendingUp, color: "bg-blue-50 text-blue-600" },
-  ];
-
-  useEffect(() => {
-    shopsApi.getCategories().then(setCategories).catch(() => { });
-  }, []);
+  useEffect(() => { shopsApi.getCategories().then(setCategories).catch(() => {}); }, []);
 
   useEffect(() => {
     if (locLoading) return;
     setLoading(true);
-    shopsApi
-      .getNearby(lat, lng, activeCategory)
-      .then((d) => setShops(d.shops))
+    shopsApi.getNearby(lat, lng, activeCategory)
+      .then(d => setShops(d.shops))
       .catch(() => setShops([]))
       .finally(() => setLoading(false));
   }, [lat, lng, locLoading, activeCategory]);
 
-  const EMOJI: Record<string, string> = {
-    Groceries: "🛒", Vegetables: "🥦", Meat: "🥩", Medicines: "💊", Clothing: "👕",
-  };
-
   return (
-    <div className="space-y-8 pb-24 md:pb-8 animate-fade-in">
+    <div className="space-y-6 pb-24 page-enter">
 
-      {/* Welcome */}
-      <div className="flex items-start justify-between">
+      {/* Greeting */}
+      <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm mb-1" style={{ color: "var(--text-muted)" }}>
-            {greetEmoji} {greetText}!
-          </p>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text)" }}>
-            {t("whatToday")}
+          <p className="text-sm" style={{ color: "var(--text-3)" }}>{emoji} {text}!</p>
+          <h1 className="text-2xl font-black mt-0.5" style={{ color: "var(--text)" }}>
+            {userName ? `Hey, ${userName.split(" ")[0]}` : "What do you need?"}
           </h1>
-          <div className="flex items-center gap-1.5 mt-1.5 text-xs" style={{ color: "var(--text-subtle)" }}>
-            {locLoading ? (
-              <><Loader2 className="w-3 h-3 animate-spin" /> {t("detecting")}</>
-            ) : locError ? (
-              <><span>📍</span> {t("usingDefault")}</>
-            ) : (
-              <>
-                <LocateFixed className="w-3 h-3 text-brand-500" />
-                <span className="text-brand-600 font-medium">{t("liveLocation")}</span>
-                <span>· {lat.toFixed(4)}, {lng.toFixed(4)}</span>
-              </>
-            )}
+          <div className="flex items-center gap-1 mt-1 text-xs" style={{ color: "var(--text-3)" }}>
+            {locLoading
+              ? <><Loader2 className="w-3 h-3 animate-spin" style={{ color: "var(--brand)" }} /> Detecting...</>
+              : <><LocateFixed className="w-3 h-3" style={{ color: "var(--brand)" }} /> {city || label}</>
+            }
           </div>
         </div>
-        <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center text-lg">
-          {greetEmoji}
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+          style={{ background: "var(--bg-card)" }}>
+          {emoji}
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats row */}
       <div className="grid grid-cols-3 gap-3">
-        {HERO_STATS.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="card p-4 flex flex-col gap-2">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color}`}>
-              <Icon className="w-4 h-4" />
-            </div>
-            <p className="text-xl font-bold" style={{ color: "var(--text)" }}>{value}</p>
-            <p className="text-xs leading-tight" style={{ color: "var(--text-muted)" }}>{label}</p>
+        {[
+          { label: "Shops Nearby", value: "12+", color: "var(--brand)" },
+          { label: "Avg Delivery", value: "25 min", color: "#22c55e" },
+          { label: "Orders Today", value: "3", color: "#3b82f6" },
+        ].map(s => (
+          <div key={s.label} className="card p-4 text-center">
+            <p className="text-xl font-black" style={{ color: s.color }}>{s.value}</p>
+            <p className="text-[11px] mt-1" style={{ color: "var(--text-3)" }}>{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* Categories */}
       <section>
-        <SectionHeader title={t("shopByCategory")} />
-        <div className="flex gap-3 overflow-x-auto pb-2">
-          <button
-            onClick={() => setActiveCategory(undefined)}
-            className={`shrink-0 flex flex-col items-center justify-center gap-1.5 w-24 h-24 rounded-2xl border-2 transition-all ${activeCategory === undefined ? "border-brand-500 bg-brand-50" : "border-gray-100 bg-white hover:border-gray-200"
-              }`}
-          >
-            <span className="text-2xl">🛍️</span>
-            <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>{t("all")}</span>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="section-title">Categories</h2>
+          <Link href="/shop" className="text-xs font-bold" style={{ color: "var(--brand)" }}>See all</Link>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+          <button onClick={() => setActiveCategory(undefined)}
+            className={`cat-chip ${activeCategory === undefined ? "active" : ""}`}>
+            <span className="text-2xl">🛍️</span>All
           </button>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
+          {categories.map(cat => (
+            <button key={cat.id}
               onClick={() => setActiveCategory(activeCategory === cat.id ? undefined : cat.id)}
-              className={`shrink-0 flex flex-col items-center justify-center gap-1.5 w-24 h-24 rounded-2xl border-2 transition-all ${activeCategory === cat.id ? "border-brand-500 bg-brand-50" : "border-gray-100 bg-white hover:border-gray-200"
-                }`}
-            >
-              <span className="text-2xl">{cat.icon}</span>
-              <span className="text-xs font-semibold" style={{ color: "var(--text)" }}>{cat.name}</span>
+              className={`cat-chip ${activeCategory === cat.id ? "active" : ""}`}>
+              <span className="text-2xl">{EMOJI[cat.name] ?? cat.icon ?? "🏪"}</span>
+              {cat.name}
             </button>
           ))}
         </div>
       </section>
 
-      {/* Nearby Shops */}
+      {/* Shops */}
       <section>
-        <SectionHeader
-          title={locLoading ? t("findingShops") : t("shopsNearYou")}
-          action={
-            <Link href="/shop" className="text-sm text-brand-600 font-semibold flex items-center gap-1 hover:underline">
-              {t("viewAll")} <ChevronRight className="w-4 h-4" />
-            </Link>
-          }
-        />
-        {loading || locLoading ? (
-          <Spinner />
-        ) : shops.length === 0 ? (
-          <EmptyState icon="🏪" title={t("noShopsFound")} subtitle={t("noShopsSubtitle")} />
-        ) : (
-          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {shops.map((shop) => <ShopCard key={shop.id} shop={shop} />)}
-          </div>
-        )}
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="section-title">Shops Near You</h2>
+          <Link href="/shop" className="text-xs font-bold flex items-center gap-1" style={{ color: "var(--brand)" }}>
+            View all <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+        {loading || locLoading ? <Spinner /> : shops.length === 0
+          ? <EmptyState icon="🏪" title="No shops found" subtitle="Try a different category" />
+          : (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {shops.map(shop => <ShopCard key={shop.id} shop={shop} />)}
+            </div>
+          )}
       </section>
     </div>
   );
 }
 
 function ShopCard({ shop }: { shop: Shop }) {
-  const { t } = useLangStore();
-  const EMOJI: Record<string, string> = {
-    Groceries: "🛒", Vegetables: "🥦", Meat: "🥩", Medicines: "💊", Clothing: "👕",
-  };
   return (
     <Link href={`/shop/${shop.id}`}>
-      <div className="card p-4 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer group">
-        <div className="flex items-start justify-between mb-3">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
-            style={{ backgroundColor: shop.category.color + "22" }}>
-            {EMOJI[shop.category.name] ?? "🏪"}
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className={`badge ${shop.is_open ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-              {shop.is_open ? `● ${t("open")}` : `● ${t("closed")}`}
-            </span>
-            {shop.distance_km !== undefined && (
-              <span className="text-xs" style={{ color: "var(--text-subtle)" }}>
-                {shop.distance_km} {t("away")}
-              </span>
-            )}
-          </div>
+      <div className="shop-card">
+        <div className="h-36 relative flex items-center justify-center overflow-hidden"
+          style={{ background: `${shop.category.color}22` }}>
+          {shop.image_url
+            ? <img src={shop.image_url} alt={shop.name} className="w-full h-full object-cover" />
+            : <span className="text-5xl">{EMOJI[shop.category.name] ?? "🏪"}</span>
+          }
+          <span className={`absolute top-3 right-3 text-xs font-bold px-2.5 py-1 rounded-full ${
+            shop.is_open ? "bg-green-500 text-white" : "bg-gray-600 text-white"
+          }`}>
+            {shop.is_open ? "● Open" : "● Closed"}
+          </span>
         </div>
-        <h3 className="font-bold group-hover:text-brand-600 transition-colors" style={{ color: "var(--text)" }}>
-          {shop.name}
-        </h3>
-        <p className="text-xs mt-0.5 line-clamp-1" style={{ color: "var(--text-muted)" }}>
-          {shop.description}
-        </p>
-        <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid var(--border-soft)" }}>
-          <StarRating rating={shop.rating} reviews={shop.total_reviews} />
-          <div className="flex items-center gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
-            <Clock className="w-3.5 h-3.5" />{shop.delivery_time_min} {t("min")}
+        <div className="p-4">
+          <h3 className="font-black text-sm mb-1" style={{ color: "var(--text)" }}>{shop.name}</h3>
+          <div className="flex items-center gap-3 text-xs" style={{ color: "var(--text-3)" }}>
+            <span className="flex items-center gap-1">
+              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+              <span className="font-bold" style={{ color: "var(--text)" }}>{shop.rating.toFixed(1)}</span>
+            </span>
+            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{shop.delivery_time_min} min</span>
+            <span className="flex items-center gap-1"><Bike className="w-3 h-3" />₹{shop.delivery_fee}</span>
           </div>
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>₹{shop.delivery_fee} {t("delivery")}</span>
         </div>
       </div>
     </Link>
